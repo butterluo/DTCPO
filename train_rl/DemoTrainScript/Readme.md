@@ -1,0 +1,1 @@
+tensorboard --bind_all --logdir_spec=grpo:./grpo/tblog,dapo_:./dapo_/tblog,dapop:./dapop/tblog,0092:./0092/tblog

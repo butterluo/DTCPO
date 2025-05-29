@@ -1,0 +1,9 @@
+working_dir: ./
+excludes: ["/.git/","/.github/","/.vscode/","/BT/data/","/docker/","/docs/","/examples/","/scripts/","*/__pycache__/","*/ckpt/","*/*tblog/","*.txt","*.md","/tests/"]
+env_vars:
+  TORCH_NCCL_AVOID_RECORD_STREAMS: "1"
+  VLLM_ATTENTION_BACKEND: "XFORMERS"
+  HYDRA_FULL_ERROR: "1"
+  TF_ENABLE_ONEDNN_OPTS: "0"
+  DISABLE_MLFLOW_INTEGRATION: "TRUE"
+  HF_HOME: "/home/azureuser/cloudfiles/code/Cache/HF/"

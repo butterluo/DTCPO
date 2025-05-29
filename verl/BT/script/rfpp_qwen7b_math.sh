@@ -1,0 +1,65 @@
+set -x
+
+EVRL_PATH="/home/azureuser/cloudfiles/code/SRC/RL/verl/"
+export CUDA_VISIBLE_DEVICES="0,1"
+export LD_LIBRARY_PATH=/anaconda/envs/azureml_py38/lib:$LD_LIBRARY_PATH
+export CONDA_PYTHON_EXE="/anaconda/envs/azureml_py38/bin/python"
+export HF_HOME="~/cloudfiles/code/Cache/HF/"
+export DISABLE_MLFLOW_INTEGRATION='TRUE'
+export TF_ENABLE_ONEDNN_OPTS="0"
+export PYTHONPATH=$EVRL_PATH:$PYTHONPATH
+
+export HYDRA_FULL_ERROR=1
+export TENSORBOARD_DIR="rfppqwn_tblog"
+export BT_VRF_PATH="FreedomIntelligence/medical_o1_verifier_3B"
+export BT_VRF_DEV="cuda:0"
+export BT_VRF_MAXLEN=10240
+
+export VLLM_ATTENTION_BACKEND=XFORMERS
+
+PYTHONUNBUFFERED=1 python3 -m verl.trainer.main_ppo \
+    algorithm.adv_estimator=reinforce_plus_plus \
+    data.train_files=$EVRL_PATH/BT/data/gsm8k/train.parquet \
+    data.val_files=$EVRL_PATH/BT/data/gsm8k/test.parquet \
+    data.train_batch_size=256 \
+    data.val_batch_size=256 \
+    data.max_prompt_length=1024 \
+    data.max_response_length=1024 \
+    data.filter_overlong_prompts=True \
+    data.truncation='error' \
+    actor_rollout_ref.model.path=Qwen/Qwen2.5-0.5B-Instruct \
+    actor_rollout_ref.actor.optim.lr=3e-6 \
+    actor_rollout_ref.model.use_remove_padding=True \
+    actor_rollout_ref.model.use_liger=True \
+    actor_rollout_ref.actor.ppo_mini_batch_size=256 \
+    actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu=16 \
+    actor_rollout_ref.actor.use_kl_loss=True \
+    actor_rollout_ref.actor.kl_loss_coef=0.001 \
+    actor_rollout_ref.actor.kl_loss_type=mse \
+    actor_rollout_ref.actor.entropy_coeff=0 \
+    actor_rollout_ref.model.enable_gradient_checkpointing=True \
+    actor_rollout_ref.actor.fsdp_config.param_offload=False \
+    actor_rollout_ref.actor.fsdp_config.optimizer_offload=False \
+    actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=16 \
+    actor_rollout_ref.rollout.tensor_model_parallel_size=1 \
+    actor_rollout_ref.rollout.name=vllm \
+    actor_rollout_ref.rollout.gpu_memory_utilization=0.6 \
+    actor_rollout_ref.rollout.n=5 \
+    actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=16 \
+    actor_rollout_ref.ref.fsdp_config.param_offload=True \
+    reward_model.enable=True \
+    reward_model.model.path=FreedomIntelligence/medical_o1_verifier_3B \
+    reward_model.micro_batch_size_per_gpu=4 \
+    reward_model.reward_manager=batch \
+    custom_reward_function.path=/home/azureuser/cloudfiles/code/SRC/RL/verl/BT/cuz/rwdfunc/gsm8kBatch.py \
+    custom_reward_function.name=compute_score \
+    algorithm.use_kl_in_reward=False \
+    trainer.critic_warmup=0 \
+    trainer.logger=['console','tensorboard'] \
+    trainer.project_name='rfppgsm8k' \
+    trainer.experiment_name='rfpp_qwen7b' \
+    trainer.n_gpus_per_node=2 \
+    trainer.nnodes=1 \
+    trainer.save_freq=3 \
+    trainer.test_freq=3 \
+    trainer.total_epochs=15 2>&1 | tee rfpp2gpudemo.log
